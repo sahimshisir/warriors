@@ -1,0 +1,67 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('user_details', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade'); // Foreign key referencing users table
+
+            // Profile Information
+          
+            $table->text('bio')->nullable(); // Bio or description
+            $table->string('location')->nullable(); // Location (city, country)
+            $table->string('website')->nullable(); // Website or links
+
+            // Activity Information
+            $table->json('posts')->nullable(); // Posts and updates
+            $table->json('likes')->nullable(); // Likes and reactions
+            $table->json('comments')->nullable(); // Comments
+            $table->json('shares')->nullable(); // Shares and retweets
+            $table->json('messages')->nullable(); // Messages and direct communications
+
+            // Network Information
+            $table->json('friends')->nullable(); // Friends or followers
+            $table->json('groups')->nullable(); // Groups or communities joined
+            $table->json('connections')->nullable(); // Connections (mutual friends)
+
+            // Usage Data
+            $table->timestamp('last_login_at')->nullable(); // Login times and frequency
+            $table->json('devices')->nullable(); // Devices used
+            $table->json('browsing_activity')->nullable(); // Browsing activity
+
+            // Interactions
+            $table->json('ad_engagements')->nullable(); // Engagement with ads
+            $table->json('mentions')->nullable(); // Tagging or mentions by other users
+            $table->json('events')->nullable(); // Events attended or RSVP’d to
+
+            // Privacy and Security Settings
+            $table->string('account_status')->default('public'); // Account settings (public/private)
+            $table->json('blocked_users')->nullable(); // Blocked users or accounts
+            $table->boolean('two_factor_enabled')->default(false); // Two-factor authentication settings
+
+            // Content Preferences
+            $table->json('interests')->nullable(); // Interests or hobbies
+            $table->json('pages_liked')->nullable(); // Pages liked or followed
+            $table->json('content_shared')->nullable(); // Content shared
+
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('user_details');
+    }
+};

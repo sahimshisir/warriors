@@ -18,10 +18,17 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
+        'first_name',
+        'last_name',
+        'username',
         'email',
         'password',
+        'phone',
+        'date_of_birth',
+        'profile_picture',
     ];
+
+    
 
     /**
      * The attributes that should be hidden for serialization.
@@ -44,5 +51,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+
+    public function details()
+    {
+        return $this->hasOne(UserDetails::class, 'user_id');
+    }
+
+    public function batch()
+    {
+        return $this->hasOne(Batch_details::class, 'user_id');
     }
 }
