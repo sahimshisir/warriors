@@ -12,8 +12,55 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
+
+  // Retrieve all users with their details
+  public function index()
+  {
+    $users = User::with(['details', 'batch'])->get();
+    return response()->json($users);
+  }
+
+  // login 
+  public function login(Request $request): JsonResponse
+  {
+
+    $request->validate([
+      'email' => 'required|email|max:255',
+      'password' => 'required|string|min:8|max:255'
+    ]);
+
+
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user || !Hash::check($request->password, $user->password)) {
+      return response()->json([
+        'error' => 'The Provided Credential are incorrect'
+      ], status: 401);
+    }
+
+    $token = $user->createToken($user->name . 'Auth-Token')->plainTextToken;
+
+    return response()->json([
+      'meassege' => 'Login succesfully',
+      'token_type' => 'Bearer',
+      'token' => $token,
+    ], status: 200);
+  }
+
+
+  public function checkUsername(Request $request)
+  {
+      $username = $request->query('username');
+  
+      // Logic to check if the username is available
+      $isAvailable = !User::where('username', $username)->exists();
+  
+      return response()->json(['available' => $isAvailable]);
+  }
+  
+
   // Store a new user with details
-  public function register(Request $request)
+  public function register(Request $request): JsonResponse
   {
     // Validate basic user info
     $validator = Validator::make($request->all(), [
@@ -58,47 +105,27 @@ class UserController extends Controller
       'bteb_roll' => $request->btebroll,
       'session' => $request->session,
     ]);
+    if ($user) {
+      $token = $user->createToken($user->name . 'Auth-Token')->plainTextToken;
+
+      return response()->json([
+        $user->load('details', 'batch'),
+        'message' => 'Registered successfully',
+        'token_type' => 'Bearer',
+        'token' => $token,
+      ], 201);
+    } else {
+      return response()->json([
+        'message' => 'Something went wrong!!'
+      ], 500);
+    }
 
 
-    return response()->json($user->load('details', 'batch'), 201);
+    // return response()->json($user->load('details', 'batch'), 201);
   }
 
-  // Retrieve all users with their details
-  public function index()
-  {
-    $users = User::with(['details', 'batch'])->get();
-    return response()->json($users);
-  }
+  // In your UserController.php
 
-  // Retrieve a specific user with 
 
-  //   public function show($id)
-  //   {
-  //       $user = User::with('details')->findOrFail($id);
-  //       return response()->json($user);
-  //   }
 
-  // Update a user and their details
-
-  //   public function update(Request $request, $id)
-  //   {
-  //       $user = User::findOrFail($id);
-
-  //       // Validate and update basic user info
-  //       $user->update($request->only('name', 'username', 'email', 'phone', 'date_of_birth'));
-
-  //       // Update detailed user info
-  //       $user->details->update($request->except('name', 'username', 'email', 'phone', 'date_of_birth'));
-
-  //       return response()->json($user->load('details'));
-  //   }
-
-  // Delete a user and their details
-
-  //   public function destroy($id)
-  //   {
-  //       $user = User::findOrFail($id);
-  //       $user->delete();
-  //       return response()->json(null, 204);
-  //   }
 }
