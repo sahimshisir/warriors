@@ -10,9 +10,10 @@ Route::prefix('auth')->group(function () {
 });
 
 // Register Account 
+Route::get('/checkUsername', [UserController::class, 'checkUsername']);
 Route::post('register', [UserController::class, 'register'])->name('register');
+Route::post('login', [UserController::class, 'login'])->name('login');
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
-     
