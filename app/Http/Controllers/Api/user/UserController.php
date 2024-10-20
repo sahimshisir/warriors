@@ -23,30 +23,46 @@ class UserController extends Controller
   // login 
   public function login(Request $request): JsonResponse
   {
-
-    $request->validate([
-      'email' => 'required|email|max:255',
-      'password' => 'required|string|min:8|max:255'
-    ]);
-
-
-    $user = User::where('email', $request->email)->first();
-
-    if (!$user || !Hash::check($request->password, $user->password)) {
+      // Validate the request
+      $request->validate([
+          'credential' => 'required|string|max:255', // Handle both email and username
+          'password' => 'required|string|min:8|max:255',
+      ]);
+  
+      // Attempt to find the user by email or username
+      $user = User::where('email', $request->credential)
+                  ->orWhere('username', $request->credential)
+                  ->first();
+  
+      if (!$user) {
+          if (filter_var($request->credential, FILTER_VALIDATE_EMAIL)) {
+              return response()->json([
+                  'error' => 'No account found with this email.'
+              ], 404);
+          } else {
+              return response()->json([
+                  'error' => 'No account found with this username.'
+              ], 404); 
+          }
+      }
+  
+      // Validate user credentials
+      if (!Hash::check($request->password, $user->password)) {
+          return response()->json([
+              'error' => 'The provided password is incorrect.'
+          ], 401);
+      }
+  
+      $token = $user->createToken($user->name . ' Auth-Token')->plainTextToken;
+  
       return response()->json([
-        'error' => 'The Provided Credential are incorrect'
-      ], status: 401);
-    }
-
-    $token = $user->createToken($user->name . 'Auth-Token')->plainTextToken;
-
-    return response()->json([
-      'meassege' => 'Login succesfully',
-      'token_type' => 'Bearer',
-      'token' => $token,
-    ], status: 200);
+          'message' => 'Login successfully',
+          'token_type' => 'Bearer',
+          'token' => $token,
+      ], 200);
   }
-
+  
+  
 
   public function checkUsername(Request $request)
   {
