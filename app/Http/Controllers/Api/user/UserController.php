@@ -23,67 +23,68 @@ class UserController extends Controller
   // login 
   public function login(Request $request): JsonResponse
   {
-      // Validate the request
-      $request->validate([
-          'credential' => 'required|string|max:255', // Handle both email and username
-          'password' => 'required|string|min:8|max:255',
-      ]);
-  
-      // Attempt to find the user by email or username
-      $user = User::where('email', $request->credential)
-                  ->orWhere('username', $request->credential)
-                  ->first();
-  
-      if (!$user) {
-          if (filter_var($request->credential, FILTER_VALIDATE_EMAIL)) {
-              return response()->json([
-                  'error' => 'No account found with this email.'
-              ], 404);
-          } else {
-              return response()->json([
-                  'error' => 'No account found with this username.'
-              ], 404); 
-          }
+    // Validate the request
+    $request->validate([
+      'credential' => 'required|string|max:255', // Handle both email and username
+      'password' => 'required|string|min:8|max:255',
+    ]);
+
+    // Attempt to find the user by email or username
+    $user = User::where('email', $request->credential)
+      ->orWhere('username', $request->credential)
+      ->first();
+
+    if (!$user) {
+      if (filter_var($request->credential, FILTER_VALIDATE_EMAIL)) {
+        return response()->json([
+          'error' => 'No account found with this email.'
+        ], 404);
+      } else {
+        return response()->json([
+          'error' => 'No account found with this username.'
+        ], 404);
       }
-  
-      // Validate user credentials
-      if (!Hash::check($request->password, $user->password)) {
-          return response()->json([
-              'error' => 'The provided password is incorrect.'
-          ], 401);
-      }
-  
-      $token = $user->createToken($user->name . ' Auth-Token')->plainTextToken;
-  
+    }
+
+    // Validate user credentials
+    if (!Hash::check($request->password, $user->password)) {
       return response()->json([
-          'message' => 'Login successfully',
-          'token_type' => 'Bearer',
-          'token' => $token,
-      ], 200);
+        'error' => 'The provided password is incorrect.'
+      ], 401);
+    }
+
+    $token = $user->createToken($user->name . ' Auth-Token')->plainTextToken;
+
+    return response()->json([
+      'message' => 'Login successfully',
+      'token_type' => 'Bearer',
+      'token' => $token,
+    ], 200);
   }
-  
-  
+
+
 
   public function checkEnquiry(Request $request)
-{
+  {
     $username = $request->query('username');
     $useremail = $request->query('email');
-    $userRoll = $request->query('bteb_roll');
+    $userRoll = $request->query('btebroll');
 
-    // Logic to check if the username, email, and roll are available
+    // Check if the username, email, or roll exists
     $isAvailable = !User::where('username', $username)->exists(); // Check if username exists
     $emailAvailable = !User::where('email', $useremail)->exists(); // Check if email exists
     $rollAvailable = !Batch_details::where('bteb_roll', $userRoll)->exists(); // Check if roll exists
 
     // Return the response with the results
     return response()->json([
-        'available' => $isAvailable,
-        'availableEmail' => $emailAvailable,
-        'availableRoll' => $rollAvailable,
+      'available' => $isAvailable,
+      'availableEmail' => $emailAvailable,
+      'availableRoll' => $rollAvailable,
     ]);
-}
+  }
 
-  
+
+
 
   // Store a new user with details
   public function register(Request $request): JsonResponse
@@ -145,8 +146,6 @@ class UserController extends Controller
         'message' => 'Something went wrong!!'
       ], 500);
     }
-
-
   }
 
   // In your UserController.php
