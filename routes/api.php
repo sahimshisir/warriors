@@ -10,7 +10,7 @@ Route::prefix('auth')->group(function () {
 });
 
 // Register Account 
-Route::get('/checkUsername', [UserController::class, 'checkUsername']);
+Route::get('/checkEnquiry', [UserController::class, 'checkEnquiry']);
 Route::post('register', [UserController::class, 'register'])->name('register');
 Route::post('login', [UserController::class, 'login'])->name('login');
 
