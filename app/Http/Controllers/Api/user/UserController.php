@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\API\user;
 
-use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Batch_details;
+use App\Models\UserDetails;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Validator;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -61,28 +62,26 @@ class UserController extends Controller
           'token' => $token,
       ], 200);
   }
-  
-  
 
-  public function checkEnquiry(Request $request)
-{
-    $username = $request->query('username');
-    $useremail = $request->query('email');
-    $userRoll = $request->query('bteb_roll');
+  public function logout(Request $request) {
+    $request->user()->token()->revoke();
 
-    // Logic to check if the username, email, and roll are available
-    $isAvailable = !User::where('username', $username)->exists(); // Check if username exists
-    $emailAvailable = !User::where('email', $useremail)->exists(); // Check if email exists
-    $rollAvailable = !Batch_details::where('bteb_roll', $userRoll)->exists(); // Check if roll exists
-
-    // Return the response with the results
     return response()->json([
-        'available' => $isAvailable,
-        'availableEmail' => $emailAvailable,
-        'availableRoll' => $rollAvailable,
+       'message' => 'Successfully logged out'
     ]);
-}
+  }
+  
+  
 
+  public function checkUsername(Request $request)
+  {
+      $username = $request->query('username');
+  
+      // Logic to check if the username is available
+      $isAvailable = !User::where('username', $username)->exists();
+  
+      return response()->json(['available' => $isAvailable]);
+  }
   
 
   // Store a new user with details
@@ -147,6 +146,7 @@ class UserController extends Controller
     }
 
 
+    // return response()->json($user->load('details', 'batch'), 201);
   }
 
   // In your UserController.php
