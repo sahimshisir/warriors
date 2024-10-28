@@ -15,7 +15,7 @@ Route::post('register', [UserController::class, 'register'])->name('register');
 Route::post('login', [UserController::class, 'login'])->name('login');
 Route::post('logout', [UserController::class, 'logout'])->name('logout')->middleware('auth:sanctum');
 Route::post('send-otp', [UserController::class, 'sendOtp']);
-Route::post('verify-otp', [UserController::class, 'verifyOtp']);
+Route::post('verifyOtp', [UserController::class, 'verifyOtp']);
 
 Route::get('/user', function (Request $request) {
     return $request->user();
