@@ -12,7 +12,7 @@ Route::prefix('auth')->group(function () {
 // Register Account 
 Route::get('/checkEnquiry', [UserController::class, 'checkEnquiry']);
 Route::post('register', [UserController::class, 'register'])->name('register');
-Route::post('login', [UserController::class, 'login'])->name('login');
+Route::post('login', [UserController::class, 'login'])->name('login')->middleware('auth.redirect');
 
 Route::get('/user', function (Request $request) {
     return $request->user();
