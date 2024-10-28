@@ -21,6 +21,8 @@ return new class extends Migration
             $table->string('profile_picture')->nullable();
             $table->date('date_of_birth'); // Date of birt
             $table->timestamp('email_verified_at')->nullable();
+            $table->string('otp')->nullable();
+            $table->timestamp('otp_expires_at')->nullable();
             $table->string('password');
             $table->enum('status',[1,2,3])->default('1')->comment('1=Active , 2=suspend,3=banned');
             $table->rememberToken();

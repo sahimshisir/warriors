@@ -10,6 +10,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
 
 class UserController extends Controller
 {
@@ -133,7 +135,9 @@ class UserController extends Controller
       'bteb_roll' => $request->btebroll,
       'session' => $request->session,
     ]);
+   
     if ($user) {
+      $this->sendOtp(new Request(['email' => $user->email]));
       $token = $user->createToken($user->name . 'Auth-Token')->plainTextToken;
 
       return response()->json([
@@ -148,25 +152,71 @@ class UserController extends Controller
       ], 500);
     }
   }
+  public function sendOtp(Request $request)
+  {
+    $request->validate(['email' => 'required|email|exists:users,email']);
+
+    $otp = random_int(100000, 999999);
+    $expiresAt = now()->addMinutes(5);
+
+    $user = User::where('email', $request->email)->first();
+    $user->otp = $otp;
+    $user->otp_expires_at = $expiresAt;
+    $user->save();
+
+    Mail::to($user->email)->send(new \App\Mail\OtpMail($otp));
+
+    return response()->json(['message' => 'OTP sent to your email.']);
+  }
+
+
+
+  public function verifyOtp(Request $request)
+  {
+      $request->validate([
+          'otp' => 'required|digits:6',
+      ]);
+  
+      // Get email from the session
+      // $email = session('email');
+  
+      // if (!$email) {
+      //     return response()->json(['message' => 'User not found.'], 404);
+      // }
+  
+      $user = User::where('email', 'ruhebalaj@mailinator.com')->first();
+  
+      if ($user && $user->otp === $request->otp && now()->isBefore($user->otp_expires_at)) {
+          $user->otp = null;
+          $user->otp_expires_at = null;
+          $user->save();
+  
+          return response()->json(['message' => 'OTP verified successfully.'], 200);
+      }
+  
+      return response()->json(['message' => 'Invalid or expired OTP.'], 400);
+  }
+  
+
 
   public function logout(Request $request)
-{
+  {
     // Check if the user is authenticated
     if (Auth::check()) {
-        // Revoke the user's token
-        $request->user()->tokens()->delete(); // This will revoke all tokens
-        
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Successfully logged out.'
-        ], 200);
+      // Revoke the user's token
+      $request->user()->tokens()->delete(); // This will revoke all tokens
+
+      return response()->json([
+        'status' => 'success',
+        'message' => 'Successfully logged out.'
+      ], 200);
     }
 
     return response()->json([
-        'status' => 'error',
-        'message' => 'User not authenticated.'
+      'status' => 'error',
+      'message' => 'User not authenticated.'
     ], 401); // Unauthorized response if user is not authenticated
-}
+  }
 
   // In your UserController.php
 
