@@ -150,6 +150,25 @@ class UserController extends Controller
     }
   }
 
+  public function logout(Request $request)
+{
+    // Check if the user is authenticated
+    if (Auth::check()) {
+        // Revoke the user's token
+        $request->user()->tokens()->delete(); // This will revoke all tokens
+        
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Successfully logged out.'
+        ], 200);
+    }
+
+    return response()->json([
+        'status' => 'error',
+        'message' => 'User not authenticated.'
+    ], 401); // Unauthorized response if user is not authenticated
+}
+
   // In your UserController.php
 
 
