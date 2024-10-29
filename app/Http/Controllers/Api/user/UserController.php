@@ -8,6 +8,7 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\Batch_details;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -153,51 +154,63 @@ class UserController extends Controller
       ], 500);
     }
   }
-  public function sendOtp(Request $request)
-  {
-    $request->validate(['email' => 'required|email|exists:users,email']);
+// Method to send OTP
+public function sendOtp(Request $request)
+{
+    // Validate email field
+    $request->validate([
+        'email' => 'required|email|exists:users,email',
+    ]);
 
+    // Generate OTP and set expiration time
     $otp = random_int(100000, 999999);
     $expiresAt = now()->addMinutes(5);
 
-    $user = User::where('email', $request->email)->first();
+    // Fetch user by email and update OTP and expiration
+    $user = User::where('email', strtolower($request->email))->first(); // Convert email to lowercase
     $user->otp = $otp;
     $user->otp_expires_at = $expiresAt;
     $user->save();
 
+    // Send OTP to user's email
     Mail::to($user->email)->send(new \App\Mail\OtpMail($otp));
 
     return response()->json(['message' => 'OTP sent to your email.']);
-  }
+}
 
+// Method to verify OTP
+public function verifyOtp(Request $request)
+{
+    // Log received email for debugging
+    Log::info('Received Email for Verification:', ['email' => $request->email]);
 
+    // Validate email and OTP fields
+    $request->validate([
+        'otp' => 'required|digits:6',
+        'email' => 'required|email|exists:users,email',
+    ]);
 
-  public function verifyOtp(Request $request)
-  {
-      $request->validate([
-          'otp' => 'required|digits:6',
-      ]);
-  
-      // Get email from the session
-      // $email = session('email');
-  
-      // if (!$email) {
-      //     return response()->json(['message' => 'User not found.'], 404);
-      // }
-  
-      $user = User::where('email', 'ruhebalaj@mailinator.com')->first();
-  
-      if ($user && $user->otp === $request->otp && now()->isBefore($user->otp_expires_at)) {
-          $user->otp = null;
-          $user->otp_expires_at = null;
-          $user->save();
-  
-          return response()->json(['message' => 'OTP verified successfully.'], 200);
-      }
-  
-      return response()->json(['message' => 'Invalid or expired OTP.'], 400);
-  }
-  
+    // Retrieve user by email
+    $user = User::where('email', strtolower($request->email))->first();
+
+    // Log OTP and expiration time for debugging
+    Log::info('Stored OTP:', ['stored_otp' => $user->otp]);
+    Log::info('Submitted OTP:', ['submitted_otp' => $request->otp]);
+    Log::info('OTP Expiration:', ['otp_expires_at' => $user->otp_expires_at]);
+
+    // Verify OTP and check if not expired
+    if ($user && $user->otp === $request->otp && now()->isBefore($user->otp_expires_at)) {
+        // Clear OTP fields after successful verification
+        $user->otp = null;
+        $user->otp_expires_at = null;
+        $user->save();
+
+        return response()->json(['message' => 'OTP verified successfully.'], 200);
+    }
+
+    // If OTP is invalid or expired
+    return response()->json(['message' => 'Invalid or expired OTP.'], 400);
+}
 
 
   public function logout(Request $request)
