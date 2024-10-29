@@ -26,60 +26,72 @@ class UserController extends Controller
   // login 
   public function login(Request $request)
   {
-      // Validate the request
-      $request->validate([
-          'credential' => 'required|string|max:255', // Handle both email and username
-          'password' => 'required|string|min:8|max:255',
-      ]);
-  
-      // Attempt to find the user by email or username
-      $user = User::where('email', $request->credential)
-          ->orWhere('username', $request->credential)
-          ->first();
-  
-      if (!$user) {
-          $errorMessage = filter_var($request->credential, FILTER_VALIDATE_EMAIL) ?
-              'No account found with this email.' : 'No account found with this username.';
-          return response()->json(['error' => $errorMessage], 404);
-      }
-  
-      // Validate user credentials
-      if (!Hash::check($request->password, $user->password)) {
-          return response()->json(['error' => 'The provided password is incorrect.'], 401);
-      }
-  
-      // Check if the user's email is verified
-      if (is_null($user->email_verified_at)) {
-          // Generate OTP
-          $otp = random_int(100000, 999999);
-          $expiresAt = now()->addMinutes(5);
-  
-          // Save OTP and expiration time to the user's record
-          $user->otp = $otp;
-          $user->otp_expires_at = $expiresAt;
-          $user->save();
-  
-          // Send OTP to the user's email
-          Mail::to($user->email)->send(new \App\Mail\OtpMail($otp));
-  
-          // Instead of session, return the email and OTP expiration in the response
-          return response()->json([
-              'message' => 'An OTP has been sent to your email for verification.',
-              'email' => $user->email, // Send the email back in the response
-              'otp_expires_at' => $expiresAt, // Include OTP expiration time
-          ], 403);
-      }
-  
-      // Email is verified, proceed with login
-      $token = $user->createToken($user->name . ' Auth-Token')->plainTextToken;
-  
+    $request->merge([
+      'remember' => filter_var($request->remember, FILTER_VALIDATE_BOOLEAN)
+    ]);
+    // Validate the request
+    $request->validate([
+      'credential' => 'required|string|max:255', // Handle both email and username
+      'password' => 'required|string|min:8|max:255',
+      'remember' => 'boolean',
+    ]);
+
+    // Attempt to find the user by email or username
+    $user = User::where('email', $request->credential)
+      ->orWhere('username', $request->credential)
+      ->first();
+
+    if (!$user) {
+      $errorMessage = filter_var($request->credential, FILTER_VALIDATE_EMAIL) ?
+        'No account found with this email.' : 'No account found with this username.';
+      return response()->json(['error' => $errorMessage], 404);
+    }
+
+    // Validate user credentials
+    if (!Hash::check($request->password, $user->password)) {
+      return response()->json(['error' => 'The provided password is incorrect.'], 401);
+    }
+
+    // Check if the user's email is verified
+    if (is_null($user->email_verified_at)) {
+      // Generate OTP
+      $otp = random_int(100000, 999999);
+      $expiresAt = now()->addMinutes(5);
+
+      // Save OTP and expiration time to the user's record
+      $user->otp = $otp;
+      $user->otp_expires_at = $expiresAt;
+      $user->save();
+
+      // Send OTP to the user's email
+      Mail::to($user->email)->send(new \App\Mail\OtpMail($otp));
+
+      // Instead of session, return the email and OTP expiration in the response
       return response()->json([
-          'message' => 'Login successfully',
-          'token_type' => 'Bearer',
-          'token' => $token,
-      ], 200);
+        'message' => 'An OTP has been sent to your email for verification.',
+        'email' => $user->email, // Send the email back in the response
+        'otp_expires_at' => $expiresAt, // Include OTP expiration time
+      ], 403);
+    }
+
+    // Email is verified, proceed with login
+    $token = $user->createToken($user->name . ' Auth-Token')->plainTextToken;
+
+    // If 'remember' is true, save token to remember_token field and set cookie
+    if ($request->remember) {
+      $user->remember_token = $token;
+      $user->save();
+
+      return response()->json(['message' => 'Login successful', 'token' => $token])
+        ->cookie('remember_token', $token, 60 * 24 * 30); // 30 days expiration
+    }
+    return response()->json([
+      'message' => 'Login successfully',
+      'token_type' => 'Bearer',
+      'token' => $token,
+    ], 200);
   }
-  
+
 
 
 
@@ -211,24 +223,33 @@ class UserController extends Controller
 
 
 
-  public function logout(Request $request)
-  {
+ public function logout(Request $request)
+{
     // Check if the user is authenticated
     if (Auth::check()) {
-      // Revoke the user's token
-      $request->user()->tokens()->delete(); // This will revoke all tokens
+        $user = $request->user();
 
-      return response()->json([
-        'status' => 'success',
-        'message' => 'Successfully logged out.'
-      ], 200);
+        // Revoke the user's tokens
+        $user->tokens()->delete(); // This will revoke all tokens
+
+        // Clear the remember_token from the user's record
+        $user->remember_token = null;
+        $user->save();
+
+        // Clear the remember_token cookie
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Successfully logged out.'
+        ], 200)->withCookie(cookie()->forget('remember_token'));
     }
 
+    // Return an error if the user is not authenticated
     return response()->json([
-      'status' => 'error',
-      'message' => 'User not authenticated.'
-    ], 401); // Unauthorized response if user is not authenticated
-  }
+        'status' => 'error',
+        'message' => 'User not authenticated.'
+    ], 401);
+}
+
 
   // In your UserController.php
 

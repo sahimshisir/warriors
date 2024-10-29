@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
          $middleware->alias([
             'auth.redirect' => \App\Http\Middleware\AuthenticatedMiddleware::class,
+            'rememberMe' => \App\Http\Middleware\RememberToken::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
