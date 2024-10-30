@@ -30,5 +30,5 @@ Route::post('verifyOtp', [UserController::class, 'verifyOtp']);
 
 // forgot password route
 Route::post('/forgot-password', [UserController::class, 'sendOtpforgot']);
-Route::post('/verify-otp', [UserController::class, 'verifyOtpforgot']);
+Route::post('/forgot_verify-otp', [UserController::class, 'verifyOtpforgot']);
 Route::post('/reset-password', [UserController::class, 'resetPassword']);

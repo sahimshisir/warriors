@@ -261,22 +261,20 @@ class UserController extends Controller
     // Validate the incoming request
     $request->validate(['email' => 'required|email']);
 
-    // Find the user by email
     $user = User::where('email', $request->email)->first();
-
     // Check if the user exists
     if (!$user) {
       return response()->json(['message' => 'User not found.'], 404);
     }
 
+    // session(['otp' => $otp, 'otp_email' => $user->email]);
+
     // Generate a random OTP
-    $otp = rand(100000, 999999); // Generate a random 6-digit OTP
-
-    // Set OTP and expiration time
-    $user->otp = $otp; // Store the generated OTP
-    $user->otp_expires_at = now()->addMinutes(10); // Set expiration to 10 minutes from now
+    $otp = random_int(100000, 999999);
+    $expiresAt = now()->addMinutes(5);
+    $user->otp = $otp;
+    $user->otp_expires_at = $expiresAt;
     $user->save();
-
     // Send the OTP via email
     try {
       Mail::to($user->email)->send(new \App\Mail\ForgotPasswordOtpMail($otp));
@@ -292,34 +290,23 @@ class UserController extends Controller
   {
       // Validate the incoming request
       $request->validate([
-          'email' => 'required|email',
-          'otp' => 'required|integer',
+        'email' => 'required|email|exists:users,email',
+        'otp' => 'required|digits:6',
       ]);
   
-      // Log the incoming request
-      Log::info('OTP verification request received', ['email' => $request->email, 'otp' => (int)$request->otp]);
-  
-      // Find the user by email
       $user = User::where('email', $request->email)->first();
   
-      // Check if user exists
-      if (!$user) {
-          return response()->json(['message' => 'User not found.'], 404);
+      if ($user && $user->otp === $request->otp && now()->isBefore($user->otp_expires_at)) {
+        // Clear OTP and set email_verified_at timestamp
+        $user->otp = null;
+        $user->otp_expires_at = null;
+        // $user->email_verified_at = now();
+        $user->save();
+  
+        return response()->json(['message' => 'OTP verified successfully.'], 200);
       }
   
-      // Debugging: Log the OTPs for comparison
-      Log::info('Database OTP: ' . $user->otp);
-      Log::info('Submitted OTP: ' . (int)$request->otp);
-      Log::info('OTP expires at: ' . $user->otp_expires_at);
-      Log::info('Current time: ' . now());
-  
-      // Check OTP validity
-      if ($user->otp !== (int)$request->otp || $user->otp_expires_at < now()) {
-          Log::warning('OTP verification failed for user: ' . $user->email);
-          return response()->json(['message' => 'Invalid or expired OTP.'], 400);
-      }
-  
-      return response()->json(['message' => 'OTP verified successfully.']);
+      return response()->json(['message' => 'Invalid or expired OTP.'], 400);
   }
   
 
@@ -336,8 +323,6 @@ class UserController extends Controller
     if (!$user) return response()->json(['message' => 'User not found.'], 404);
 
     $user->password = bcrypt($request->password);
-    $user->otp = null;
-    $user->otp_expires_at = null;
     $user->save();
 
     return response()->json(['message' => 'Password has been reset.']);
