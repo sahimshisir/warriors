@@ -27,3 +27,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::post('send-otp', [UserController::class, 'sendOtp']);
 Route::post('verifyOtp', [UserController::class, 'verifyOtp']);
+
+// forgot password route
+Route::post('/forgot-password', [UserController::class, 'sendOtpforgot']);
+Route::post('/verify-otp', [UserController::class, 'verifyOtpforgot']);
+Route::post('/reset-password', [UserController::class, 'resetPassword']);

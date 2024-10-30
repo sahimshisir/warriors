@@ -26,6 +26,8 @@ class User extends Authenticatable
         'phone',
         'date_of_birth',
         'profile_picture',
+        'otp',
+        'otp_expires_at',
     ];
 
     

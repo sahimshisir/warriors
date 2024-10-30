@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\API\user;
 
-use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Batch_details;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Http\Request;
+use App\Models\Batch_details;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
@@ -223,36 +224,122 @@ class UserController extends Controller
 
 
 
- public function logout(Request $request)
-{
+  public function logout(Request $request)
+  {
     // Check if the user is authenticated
     if (Auth::check()) {
-        $user = $request->user();
+      $user = $request->user();
 
-        // Revoke the user's tokens
-        $user->tokens()->delete(); // This will revoke all tokens
+      // Revoke the user's tokens
+      $user->tokens()->delete(); // This will revoke all tokens
 
-        // Clear the remember_token from the user's record
-        $user->remember_token = null;
-        $user->save();
+      // Clear the remember_token from the user's record
+      $user->remember_token = null;
+      $user->save();
 
-        // Clear the remember_token cookie
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Successfully logged out.'
-        ], 200)->withCookie(cookie()->forget('remember_token'));
+      // Clear the remember_token cookie
+      return response()->json([
+        'status' => 'success',
+        'message' => 'Successfully logged out.'
+      ], 200)->withCookie(cookie()->forget('remember_token'));
     }
 
     // Return an error if the user is not authenticated
     return response()->json([
-        'status' => 'error',
-        'message' => 'User not authenticated.'
+      'status' => 'error',
+      'message' => 'User not authenticated.'
     ], 401);
-}
+  }
 
 
   // In your UserController.php
 
+  // <-########################## Forgot Password ###########################->
+
+  public function sendOtpForgot(Request $request)
+  {
+    // Validate the incoming request
+    $request->validate(['email' => 'required|email']);
+
+    // Find the user by email
+    $user = User::where('email', $request->email)->first();
+
+    // Check if the user exists
+    if (!$user) {
+      return response()->json(['message' => 'User not found.'], 404);
+    }
+
+    // Generate a random OTP
+    $otp = rand(100000, 999999); // Generate a random 6-digit OTP
+
+    // Set OTP and expiration time
+    $user->otp = $otp; // Store the generated OTP
+    $user->otp_expires_at = now()->addMinutes(10); // Set expiration to 10 minutes from now
+    $user->save();
+
+    // Send the OTP via email
+    try {
+      Mail::to($user->email)->send(new \App\Mail\ForgotPasswordOtpMail($otp));
+    } catch (\Exception $e) {
+      return response()->json(['message' => 'Failed to send OTP. Please try again.'], 500);
+    }
+
+    // Return success response
+    return response()->json(['message' => 'OTP sent to your email.']);
+  }
+
+  public function verifyOtpForgot(Request $request)
+  {
+      // Validate the incoming request
+      $request->validate([
+          'email' => 'required|email',
+          'otp' => 'required|integer',
+      ]);
+  
+      // Log the incoming request
+      Log::info('OTP verification request received', ['email' => $request->email, 'otp' => (int)$request->otp]);
+  
+      // Find the user by email
+      $user = User::where('email', $request->email)->first();
+  
+      // Check if user exists
+      if (!$user) {
+          return response()->json(['message' => 'User not found.'], 404);
+      }
+  
+      // Debugging: Log the OTPs for comparison
+      Log::info('Database OTP: ' . $user->otp);
+      Log::info('Submitted OTP: ' . (int)$request->otp);
+      Log::info('OTP expires at: ' . $user->otp_expires_at);
+      Log::info('Current time: ' . now());
+  
+      // Check OTP validity
+      if ($user->otp !== (int)$request->otp || $user->otp_expires_at < now()) {
+          Log::warning('OTP verification failed for user: ' . $user->email);
+          return response()->json(['message' => 'Invalid or expired OTP.'], 400);
+      }
+  
+      return response()->json(['message' => 'OTP verified successfully.']);
+  }
+  
 
 
+  public function resetPassword(Request $request)
+  {
+    $request->validate([
+      'email' => 'required|email',
+      'password' => 'required|confirmed|min:6',
+    ]);
+
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user) return response()->json(['message' => 'User not found.'], 404);
+
+    $user->password = bcrypt($request->password);
+    $user->otp = null;
+    $user->otp_expires_at = null;
+    $user->save();
+
+    return response()->json(['message' => 'Password has been reset.']);
+  }
 }
