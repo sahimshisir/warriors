@@ -283,7 +283,7 @@ class UserController extends Controller
     }
 
     // Return success response
-    return response()->json(['message' => 'OTP sent to your email.']);
+    return response()->json(['message' => 'Please check your email for the OTP to complete the process.']);
   }
 
   public function verifyOtpForgot(Request $request)
@@ -325,6 +325,6 @@ class UserController extends Controller
     $user->password = bcrypt($request->password);
     $user->save();
 
-    return response()->json(['message' => 'Password has been reset.']);
+    return response()->json(['message' => 'Password reset successful! Securely logging you in']);
   }
 }

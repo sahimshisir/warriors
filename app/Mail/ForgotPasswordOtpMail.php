@@ -24,7 +24,7 @@ class ForgotPasswordOtpMail extends Mailable
     }
     public function build()
     {
-        return $this->view('emails.otp')
+        return $this->view('emails.forgot_password_otp')
             ->with(['otp' => $this->otp]);
     }
 
@@ -44,7 +44,7 @@ class ForgotPasswordOtpMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'email.otp',
+            view: 'email.forgot_password_otp',
         );
     }
 
