@@ -10,8 +10,8 @@ class UserDetails extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'last_login_at',
+        'user_id', 
+        'last_login_at', 
         'devices', 
         'browsing_activity', 
         'blocked_users', 
